@@ -6,17 +6,36 @@ import (
 	"strconv"
 )
 
-type fieldParserFunc func(v string) (reflect.Value, error)
+type fieldSetterFunc func(v string) (reflect.Value, error)
 
-type fieldParser interface {
-	Parse(v string) (reflect.Value, error)
+type fieldSetter interface {
+	Set(v string, field reflect.Value) error
 }
 
-func (f fieldParserFunc) Parse(v string) (reflect.Value, error) {
-	return f(v)
+func (f fieldSetterFunc) Set(v string, field reflect.Value) error {
+	value, err := f(v)
+	if err != nil {
+		return err
+	}
+
+	field.Set(value.Convert(field.Type()))
+	return nil
 }
 
-var fieldKindToParser = map[reflect.Kind]fieldParserFunc{
+func charSliceSetter(sliceType reflect.Type) fieldSetterFunc {
+	return func(v string) (reflect.Value, error) {
+		result := reflect.MakeSlice(sliceType, len(v), len(v))
+		strValue := reflect.ValueOf(v)
+		for i := 0; i < len(v); i++ {
+			sliceEl := result.Index(i)
+			char := strValue.Index(i)
+			sliceEl.Set(char.Convert(sliceType.Elem()))
+		}
+		return result, nil
+	}
+}
+
+var fieldKindToParser = map[reflect.Kind]fieldSetterFunc{
 	reflect.String: func(v string) (reflect.Value, error) {
 		return reflect.ValueOf(v), nil
 	},
@@ -70,11 +89,42 @@ func asReflectValueAndCast[C any, T any](v T, err error) (reflect.Value, error) 
 	return reflect.ValueOf(v).Convert(reflect.TypeOf(c)), err
 }
 
-func validateFieldAndReturnParser(field reflect.Value) (fieldParser, error) {
-	parser, ok := fieldKindToParser[field.Kind()]
+func validateFieldAndReturnSetter(field reflect.Value) (fieldSetter, error) {
+	fieldType := field.Type()
+	for fieldType.Kind() == reflect.Pointer {
+		fieldType = fieldType.Elem()
+	}
+
+	if fieldType.Kind() == reflect.Slice {
+		switch fieldType.Elem().Kind() {
+		case reflect.Int32:
+			return concreteFieldInitializer{charSliceSetter(fieldType)}, nil
+		case reflect.Uint8:
+			return concreteFieldInitializer{charSliceSetter(fieldType)}, nil
+		default:
+		}
+	}
+
+	parser, ok := fieldKindToParser[fieldType.Kind()]
 	if !ok {
 		return nil, fmt.Errorf("unsupported field type %s", field.Type().Name())
 	}
 
-	return parser, nil
+	return concreteFieldInitializer{parser}, nil
+}
+
+type concreteFieldInitializer struct {
+	next fieldSetter
+}
+
+func (c concreteFieldInitializer) Set(v string, field reflect.Value) error {
+	fieldType := field.Type()
+	for fieldType.Kind() == reflect.Pointer {
+		fieldValue := reflect.New(fieldType.Elem())
+		field.Set(fieldValue)
+		field = fieldValue.Elem()
+		fieldType = fieldValue.Elem().Type()
+	}
+
+	return c.next.Set(v, field)
 }

@@ -66,8 +66,10 @@ type Unmarshaler interface {
 //   - uint64
 //   - float32
 //   - float64
+//   - []byte
+//   - []rune
 //
-// Note: pointers to any of the above values are NOT supported.
+// Note: pointers to [Unmarshaler] implementations are supported.
 func Unmarshal(env []string, out any) error {
 	if out == nil {
 		return errors.New("out must be a non-nil pointer to a struct")
@@ -192,7 +194,7 @@ func processField(field reflect.Value, fieldType reflect.StructField, envVars ma
 		return loadEnvVarsIntoStruct(field, envVars, fmt.Sprintf("%s.", fieldPath), fmt.Sprintf("%s_", envName))
 	}
 
-	fieldValueParser, err := validateFieldAndReturnParser(field)
+	fieldValueSetter, err := validateFieldAndReturnSetter(field)
 	if err != nil {
 		return newFieldParseError(err, fieldPath, envName)
 	}
@@ -201,12 +203,10 @@ func processField(field reflect.Value, fieldType reflect.StructField, envVars ma
 		return nil
 	}
 
-	fieldValue, err := fieldValueParser.Parse(envValue)
+	err = fieldValueSetter.Set(envValue, field)
 	if err != nil {
 		return newFieldParseError(err, fieldPath, envName)
 	}
-
-	field.Set(fieldValue.Convert(fieldType.Type))
 
 	return nil
 }

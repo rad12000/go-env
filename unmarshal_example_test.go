@@ -8,10 +8,14 @@ import (
 	"os"
 )
 
+type foo byte
+
 func ExampleUnmarshal_plainStruct() {
 	var plainStruct struct {
-		URL  string
-		Auth struct {
+		URL        string
+		DeleteUser *bool
+		Bytes      []foo
+		Auth       struct {
 			SigningKey string
 			TTLSeconds uint
 		}
@@ -22,6 +26,8 @@ func ExampleUnmarshal_plainStruct() {
 			"URL", "https://example.com",
 			"AUTH_SIGNING_KEY", "signing_key",
 			"AUTH_TTL_SECONDS", "60",
+			"BYTES", "these are bytes",
+			"DELETE_USER", "true",
 		),
 	)
 	defer revert()
@@ -31,12 +37,16 @@ func ExampleUnmarshal_plainStruct() {
 	fmt.Println("url =", plainStruct.URL)
 	fmt.Println("signing key =", plainStruct.Auth.SigningKey)
 	fmt.Println("ttl seconds =", plainStruct.Auth.TTLSeconds)
+	fmt.Println("delete user =", *plainStruct.DeleteUser)
+	fmt.Println("bytes =", string(plainStruct.Bytes))
 
 	// Output:
 	// <nil>
 	// url = https://example.com
 	// signing key = signing_key
 	// ttl seconds = 60
+	// delete user = true
+	// bytes = these are bytes
 }
 
 func ExampleUnmarshal_envTags() {
