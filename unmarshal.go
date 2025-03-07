@@ -145,7 +145,8 @@ func parseFieldTag(tag string) fieldTag {
 	keyValPairs := make(map[string]string)
 	for _, pair := range strings.Split(tagParts[1], " ") {
 		keyVal := strings.SplitN(pair, "=", 2)
-		if strings.EqualFold(keyVal[0], "required") {
+		standardName := strings.ToLower(strings.TrimSpace(keyVal[0]))
+		if strings.EqualFold(standardName, "required") {
 			result.Required = true
 		}
 
@@ -153,7 +154,7 @@ func parseFieldTag(tag string) fieldTag {
 			continue
 		}
 
-		keyValPairs[strings.ToLower(keyVal[0])] = keyVal[1]
+		keyValPairs[standardName] = strings.ReplaceAll(keyVal[1], "\\s", " ")
 	}
 
 	result.Default, result.HasDefault = keyValPairs["default"]

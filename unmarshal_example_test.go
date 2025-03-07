@@ -52,6 +52,7 @@ func ExampleUnmarshal_plainStruct() {
 func ExampleUnmarshal_envTags() {
 	var plainStruct struct {
 		UnsupportedType chan struct{} `env:"-"`
+		Name            string        `env:",required default=John\\sDoe"`
 		URL             string
 		FavoriteColor   string `env:",default=blue"`
 		Authentication  struct {
@@ -76,6 +77,7 @@ func ExampleUnmarshal_envTags() {
 	fmt.Println("signing key =", plainStruct.Authentication.SigningKey)
 	fmt.Println("ttl seconds =", plainStruct.Authentication.TTLSeconds)
 	fmt.Println("favorite color =", plainStruct.FavoriteColor)
+	fmt.Println("name =", plainStruct.Name)
 
 	// Output:
 	// <nil>
@@ -83,6 +85,7 @@ func ExampleUnmarshal_envTags() {
 	// signing key = signing_key
 	// ttl seconds = 60
 	// favorite color = blue
+	// name = John Doe
 }
 
 func ExampleUnmarshal_error() {
@@ -101,7 +104,7 @@ func ExampleUnmarshal_error() {
 	// true
 	// UnsupportedType
 	// UNSUPPORTED_TYPE
-	// failed to set value of field UnsupportedType, mapping to env var UNSUPPORTED_TYPE: unsupported field type
+	// failed to unmarshal environment variable "UNSUPPORTED_TYPE" into field "UnsupportedType": unsupported field type
 }
 
 func ExampleUnmarshal_customTypes() {
