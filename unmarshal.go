@@ -125,6 +125,7 @@ type fieldTag struct {
 	Name       string
 	Default    string
 	HasDefault bool
+	Required   bool
 }
 
 func parseFieldTag(tag string) fieldTag {
@@ -138,6 +139,10 @@ func parseFieldTag(tag string) fieldTag {
 	keyValPairs := make(map[string]string)
 	for _, pair := range strings.Split(tagParts[1], " ") {
 		keyVal := strings.SplitN(pair, "=", 2)
+		if strings.EqualFold(keyVal[0], "required") {
+			result.Required = true
+		}
+
 		if len(keyVal) != 2 {
 			continue
 		}
@@ -168,6 +173,10 @@ func processField(field reflect.Value, fieldType reflect.StructField, envVars ma
 	if !envValueSet && fTag.HasDefault {
 		envValue = fTag.Default
 		envValueSet = true
+	}
+
+	if !envValueSet && fTag.Required {
+		return newFieldParseError(errors.New("missing required value"), fieldPath, envName)
 	}
 
 	didUnmarshal, err := attemptUnmarshal(field, envValue, envValueSet)
