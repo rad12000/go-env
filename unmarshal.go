@@ -86,7 +86,11 @@ func Unmarshal(env []string, out any) error {
 	}
 
 	envVars := parseEnv(env)
-	return loadEnvVarsIntoStruct(value, envVars, "", "")
+	if err := loadEnvVarsIntoStruct(value, envVars, "", ""); err != nil {
+		return fmt.Errorf("failed to unmarshal environment variables into struct %T: %w", out, err)
+	}
+
+	return nil
 }
 
 func parseEnv(vars []string) map[string]string {

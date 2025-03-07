@@ -36,5 +36,5 @@ func (l fieldParseError) Unwrap() error {
 }
 
 func (l fieldParseError) Error() string {
-	return fmt.Sprintf("failed to set value of field %s, mapping to env var %s: %s", l.field, l.envVar, l.err)
+	return fmt.Sprintf("failed to unmarshal environment variable %q into field %q: %s", l.envVar, l.field, l.err)
 }
