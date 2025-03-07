@@ -170,12 +170,12 @@ func processField(field reflect.Value, fieldType reflect.StructField, envVars ma
 		envValueSet = true
 	}
 
-	if unmarshaler, isUnmarshaler := field.Addr().Interface().(Unmarshaler); isUnmarshaler {
-		if envValueSet {
-			if err := unmarshaler.UnmarshalEnv(envValue); err != nil {
-				return newFieldParseError(err, fieldPath, envName)
-			}
-		}
+	didUnmarshal, err := attemptUnmarshal(field, envValue, envValueSet)
+	if err != nil {
+		return newFieldParseError(err, fieldPath, envName)
+	}
+
+	if didUnmarshal {
 		return nil
 	}
 
@@ -200,6 +200,50 @@ func processField(field reflect.Value, fieldType reflect.StructField, envVars ma
 	field.Set(fieldValue.Convert(fieldType.Type))
 
 	return nil
+}
+
+var unmarshalerType = reflect.TypeOf((*Unmarshaler)(nil)).Elem()
+
+func attemptUnmarshal(field reflect.Value, envValue string, envValueSet bool) (bool, error) {
+	field = field.Addr()
+	fieldType := field.Type()
+	var (
+		unmarshalerDepth int
+		foundUnmarshaler = true
+	)
+
+	for !fieldType.Implements(unmarshalerType) {
+		if fieldType.Kind() == reflect.Pointer {
+			fieldType = fieldType.Elem()
+			unmarshalerDepth++
+			continue
+		}
+
+		foundUnmarshaler = false
+		break
+	}
+
+	if !foundUnmarshaler {
+		return false, nil
+	}
+
+	if !envValueSet {
+		return true, nil
+	}
+
+	unmarshalerValue := field
+	for i := 0; i < unmarshalerDepth; i++ {
+		val := reflect.New(unmarshalerValue.Type().Elem().Elem())
+		unmarshalerValue.Elem().Set(val)
+		unmarshalerValue = unmarshalerValue.Elem()
+	}
+
+	unmarshaler, isUnmarshaler := unmarshalerValue.Interface().(Unmarshaler)
+	if !isUnmarshaler {
+		panic("unreachable case: must be unmarshaler")
+	}
+
+	return true, unmarshaler.UnmarshalEnv(envValue)
 }
 
 func fieldNameToEnvVariable(name string) string {
