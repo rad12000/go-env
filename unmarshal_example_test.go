@@ -8,6 +8,33 @@ import (
 	"os"
 )
 
+func ExampleUnmarshalPrefix() {
+	var db struct {
+		ConnectionString string
+		User             string
+		Password         string
+		TimeoutSeconds   int
+	}
+
+	revert := Must(
+		SetEnv(
+			"DB_CONNECTION_STRING", "db connection string",
+			"DB_USER", "db user",
+			"DB_PASSWORD", "db password",
+			"DB_TIMEOUT_SECONDS", "123",
+		),
+	)
+	defer revert()
+
+	err := env.UnmarshalPrefix(os.Environ(), &db, "DB_")
+	fmt.Println(err)
+	fmt.Printf("%+v", db)
+
+	// Output:
+	// <nil>
+	// {ConnectionString:db connection string User:db user Password:db password TimeoutSeconds:123}
+}
+
 type foo byte
 
 func ExampleUnmarshal_plainStruct() {

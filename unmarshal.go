@@ -71,8 +71,14 @@ type Unmarshaler interface {
 //
 // Note: pointers to [Unmarshaler] implementations are supported.
 func Unmarshal(env []string, out any) error {
+	return UnmarshalPrefix(env, out, "")
+}
+
+// UnmarshalPrefix is just like [Unmarshal], but allows the caller to provide a prefix, which will be prepended to
+// field environment variable names (excepting those that are explicitly set via the `env` tag.
+func UnmarshalPrefix(env []string, out any, prefix string) error {
 	if out == nil {
-		return errors.New("out must be a non-nil pointer to a struct")
+		return errors.New("env: out must be a non-nil pointer to a struct")
 	}
 
 	ptr := reflect.ValueOf(out)
@@ -86,7 +92,7 @@ func Unmarshal(env []string, out any) error {
 	}
 
 	envVars := parseEnv(env)
-	if err := loadEnvVarsIntoStruct(value, envVars, "", ""); err != nil {
+	if err := loadEnvVarsIntoStruct(value, envVars, "", prefix); err != nil {
 		return fmt.Errorf("failed to unmarshal environment variables into struct %T: %w", out, err)
 	}
 
