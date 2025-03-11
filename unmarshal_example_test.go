@@ -19,6 +19,9 @@ func ExampleUnmarshal_plainStruct() {
 			SigningKey string
 			TTLSeconds uint
 		}
+		Top16Moments    string
+		High5           bool
+		WITH_UNDERSCORE string
 	}
 
 	revert := Must(
@@ -28,6 +31,9 @@ func ExampleUnmarshal_plainStruct() {
 			"AUTH_TTL_SECONDS", "60",
 			"BYTES", "these are bytes",
 			"DELETE_USER", "true",
+			"TOP_16_MOMENTS", "moments",
+			"HIGH_5", "true",
+			"WITH_UNDERSCORE", "underscore",
 		),
 	)
 	defer revert()
@@ -39,6 +45,9 @@ func ExampleUnmarshal_plainStruct() {
 	fmt.Println("ttl seconds =", plainStruct.Auth.TTLSeconds)
 	fmt.Println("delete user =", *plainStruct.DeleteUser)
 	fmt.Println("bytes =", string(plainStruct.Bytes))
+	fmt.Println("top 16 moments =", plainStruct.Top16Moments)
+	fmt.Println("high 5 =", plainStruct.High5)
+	fmt.Println("with underscore =", plainStruct.WITH_UNDERSCORE)
 
 	// Output:
 	// <nil>
@@ -47,6 +56,9 @@ func ExampleUnmarshal_plainStruct() {
 	// ttl seconds = 60
 	// delete user = true
 	// bytes = these are bytes
+	// top 16 moments = moments
+	// high 5 = true
+	// with underscore = underscore
 }
 
 func ExampleUnmarshal_envTags() {

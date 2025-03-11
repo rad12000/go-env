@@ -260,35 +260,61 @@ func attemptUnmarshal(field reflect.Value, envValue string, envValueSet bool) (b
 	return true, unmarshaler.UnmarshalEnv(envValue)
 }
 
+func isNum(r rune) bool {
+	return r >= '0' && r <= '9'
+}
+
+func isLetter(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
+}
+
 func fieldNameToEnvVariable(name string) string {
 	var (
-		sb                        strings.Builder
-		lastIterDidWriteSeparator bool
+		sb        strings.Builder
+		nameRunes = []rune(name)
+		prevRune  = '_' // Initially an underscore to avoid ever prefixing an env name with an underscore.
 	)
 
-	for i, cur := range name {
+	// writeRune will only write an underscore if the previously written rune was not also an underscore.
+	// It also updates the prevRune.
+	writeRune := func(r rune) {
+		if r == '_' && r == prevRune {
+			return
+		}
+
+		prevRune = r
+		sb.WriteRune(r)
+	}
+
+	for i := 0; i < len(name); i++ {
+		cur := nameRunes[i]
 		if i == len(name)-1 {
-			sb.WriteRune(unicode.ToUpper(cur))
-			continue
-		}
-		next := rune(name[i+1])
-
-		if i > 0 && !lastIterDidWriteSeparator && unicode.IsUpper(cur) && unicode.IsLower(next) {
-			lastIterDidWriteSeparator = true
-			sb.WriteRune('_')
-			sb.WriteRune(cur)
+			writeRune(unicode.ToUpper(cur))
 			continue
 		}
 
-		if unicode.IsLower(cur) && unicode.IsUpper(next) {
-			lastIterDidWriteSeparator = true
-			sb.WriteRune(unicode.ToUpper(cur))
-			sb.WriteRune('_')
-			continue
-		}
+		var (
+			next                   = rune(name[i+1])
+			isLetterFollowedByNum  = isLetter(cur) && isNum(next)
+			isNumFollowedByALetter = isNum(cur) && isLetter(next)
+			isUpperFollowedByLower = unicode.IsUpper(cur) && unicode.IsLower(next)
+			isLowerFollowedByUpper = unicode.IsLower(cur) && unicode.IsUpper(next)
+		)
 
-		sb.WriteRune(unicode.ToUpper(cur))
-		lastIterDidWriteSeparator = false
+		switch {
+		case isUpperFollowedByLower:
+			writeRune('_')
+			writeRune(cur)
+		case isLetterFollowedByNum:
+			fallthrough
+		case isNumFollowedByALetter:
+			fallthrough
+		case isLowerFollowedByUpper:
+			writeRune(unicode.ToUpper(cur))
+			writeRune('_')
+		default:
+			writeRune(unicode.ToUpper(cur))
+		}
 	}
 
 	return sb.String()
